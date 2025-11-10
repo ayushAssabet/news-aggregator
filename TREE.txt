@@ -1,0 +1,42 @@
+news_pipeline_project/
+  README.md
+  TREE.txt
+  .env.sample
+  requirements.txt
+  Dockerfile.api
+  Dockerfile.scraper
+  docker-compose.yml
+  alembic.ini
+.github/
+  workflows/
+    ci.yml
+alembic/
+  env.py
+  versions/
+utils/
+  __init__.py
+  dedupe.py
+  reliability.py
+api/
+  app/
+    __init__.py
+    db.py
+    models.py
+    schemas.py
+    crud.py
+    main.py
+scraper/
+  news_spider/
+    scrapy.cfg
+    news_spider/
+      __init__.py
+      items.py
+      pipelines.py
+      settings.py
+      spiders/
+        __init__.py
+        generic_spider.py
+tests/
+  __init__.py
+  test_dedupe.py
+  test_health.py
