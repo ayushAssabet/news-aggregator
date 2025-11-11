@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 from twisted.internet.threads import deferToThread
-from api.app.database.db import SessionLocal, engine
-from api.app.database.schemas import ArticleCreate
-from api.app.services import article_service
-from api.app.config.settings import settings
+from app.database.db import SessionLocal, engine
+from app.schemas import ArticleCreate
+from app.services import article_service
+from app.config.settings import settings
 import os
 
 
@@ -20,7 +20,7 @@ class StoreArticlePipeline:
         # Optionally allow auto-create for dev via AUTO_CREATE_TABLES=true.
         if settings.enable_auto_create_tables:
             try:
-                from api.app.database.models import Base  # local import to avoid heavy import on module load
+                from app.database.base import Base  # local import to avoid heavy import on module load
                 Base.metadata.create_all(engine)
             except Exception as e:
                 spider.logger.warning(f"Auto table creation skipped: {e}")
