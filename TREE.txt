@@ -7,25 +7,50 @@ news_pipeline_project/
   Dockerfile.scraper
   docker-compose.yml
   alembic.ini
-.github/
-  workflows/
-    ci.yml
 alembic/
   env.py
   versions/
-utils/
+app/
   __init__.py
-  dedupe.py
-  reliability.py
-api/
-  app/
+  main.py
+  api/
     __init__.py
+    article_router.py
+  config/
+    settings.py
+    logging_config.py
+  database/
+    __init__.py
+    base.py
     db.py
-    models.py
-    schemas.py
-    crud.py
-    main.py
+  controllers/
+    __init__.py
+    article_controller.py
+  models/
+    __init__.py
+    article_model.py
+    source_model.py
+  schemas/
+    __init__.py
+    article_schema.py
+  repositories/
+    __init__.py
+    article_repository.py
+  services/
+    __init__.py
+    summarize/
+      __init__.py
+      summarize_service.py
+    scraper/
+      __init__.py
+      scraping_service.py
+    ranking/
+      __init__.py
+      ranking_config.py
+      ranking_features.py
+      ranking_service.py
 scraper/
+  celery_app.py
   news_spider/
     scrapy.cfg
     news_spider/
@@ -35,8 +60,12 @@ scraper/
       settings.py
       spiders/
         __init__.py
-        generic_spider.py
+        news_spider.py
 tests/
   __init__.py
   test_dedupe.py
   test_health.py
+utils/
+  __init__.py
+  dedupe.py
+  reliability.py

@@ -2,6 +2,7 @@ from celery import Celery
 import os
 
 redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+schedule_seconds = float(os.getenv("SCRAPE_SCHEDULE_SECONDS", "3600"))
 
 celery = Celery(
     "news_scrap_task",
@@ -16,9 +17,9 @@ celery.conf.update(
     accept_content=["json"],
     timezone="UTC",
     beat_schedule={
-        "run-generic-spider-every-hour": {
+        "run-generic-spider": {
             "task": "scraper.tasks.run_generic_spider",
-            "schedule": 360.0, #for early test make it 6 minutes
+            "schedule": schedule_seconds,
         },
     },
 )
