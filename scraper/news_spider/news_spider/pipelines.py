@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 from twisted.internet.threads import deferToThread
-from api.app.db import SessionLocal, engine
-from api.app.models import Base
-from api.app.schemas import ArticleCreate
-from api.app.services import article_service
+from app.database.db import SessionLocal, engine
+from app.schemas import ArticleCreate
+from app.services import article_service
+from app.config.settings import settings
 import os
 
 
@@ -16,8 +16,14 @@ class StoreArticlePipeline:
         return cls(os.getenv("DATABASE_URL"))
 
     def open_spider(self, spider):
-        # Ensure tables exist (safe to call)
-        Base.metadata.create_all(engine)
+        # In production, rely on Alembic migrations to create tables.
+        # Optionally allow auto-create for dev via AUTO_CREATE_TABLES=true.
+        if settings.enable_auto_create_tables:
+            try:
+                from app.database.base import Base  # local import to avoid heavy import on module load
+                Base.metadata.create_all(engine)
+            except Exception as e:
+                spider.logger.warning(f"Auto table creation skipped: {e}")
         self.Session = SessionLocal
 
     def process_item(self, item, spider):
@@ -42,3 +48,5 @@ class StoreArticlePipeline:
         finally:
             s.close()
         return item
+
+
