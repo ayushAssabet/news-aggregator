@@ -5,7 +5,7 @@ config = context.config
 if os.getenv('DATABASE_URL'):
     config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL'))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from api.app.models import Base
+from api.app.database.models import Base
 target_metadata = Base.metadata
 
 def run_migrations_offline():
@@ -25,3 +25,5 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+
+

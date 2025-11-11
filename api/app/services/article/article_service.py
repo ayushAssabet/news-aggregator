@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session
 from typing import Optional, List
-from ..schemas import ArticleCreate
-from .. import models
+from ...database.schemas import ArticleCreate
+from ...database import models
 from utils.dedupe import fingerprint
 from utils.reliability import reliability_score
-from ..repositories import article_repository as repo
+from ...repositories import article_repository as repo
+from ..ranking.ranking_service import record_article_rank, RankingConfig
 
 
 def create_article(db: Session, payload: ArticleCreate) -> models.Article:
@@ -24,7 +25,13 @@ def create_article(db: Session, payload: ArticleCreate) -> models.Article:
             str(payload.url), bool(payload.author), len(payload.content or "")
         ),
     }
-    return repo.create(db, data)
+    created = repo.create(db, data)
+    # Record rank in Redis (best-effort; ignore failures)
+    try:
+        record_article_rank(created, db, cfg=RankingConfig())
+    except Exception:
+        pass
+    return created
 
 
 def list_articles(db: Session, limit: int = 50, offset: int = 0):
@@ -33,4 +40,3 @@ def list_articles(db: Session, limit: int = 50, offset: int = 0):
 
 def get_article(db: Session, article_id):
     return repo.get_by_id(db, article_id)
-

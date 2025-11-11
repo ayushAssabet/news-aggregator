@@ -1,7 +1,7 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from .. import models
+from ..database import models
 
 
 def get_by_fingerprint(db: Session, fp: str) -> Optional[models.Article]:
@@ -30,4 +30,3 @@ def list_articles(db: Session, limit: int = 50, offset: int = 0) -> List[models.
 
 def get_by_id(db: Session, article_id):
     return db.get(models.Article, article_id)
-

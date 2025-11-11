@@ -1,37 +1,26 @@
 import uuid
 import enum
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import String, Text, Integer, DateTime, Float, ForeignKey, UniqueConstraint, func, Enum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Text, DateTime, Float, ForeignKey, UniqueConstraint, func, Enum
 
-
-class Base(DeclarativeBase):
-    pass
+from .base import Base
 
 
 class ArticleCategory(enum.Enum):
-    MUKHYA_SAMACHAR = "मुख्य समाचार"       
-    RAJNITI = "राजनीति"                     
-    ARTH = "अर्थ"                           
-    KHELKUD = "खेलकुद"                       
-    SAMAJ = "समाज"                           
-    SHIKSHA = "शिक्षा"                       
-    PRAVIDHI = "प्रविधि"                     
-    MANORANJAN = "मनोरञ्जन"                
-    JALAVAYU = "जलवायु"
-    APRADH = "अपराध"                        
-    ANTARRASHTRIYA = "अन्तर्राष्ट्रिय"       
-    PARYATAN = "पर्यटन"                   
-    VICHAR = "विचार" 
-
-
-class Source(Base):
-    __tablename__ = "sources"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255))
-    domain: Mapped[str] = mapped_column(String(255), unique=True)
-    articles = relationship("Article", back_populates="source")
+    MUKHYA_SAMACHAR = "MUKHYA_SAMACHAR"
+    RAJNITI = "RAJNITI"
+    ARTH = "ARTH"
+    KHELKUD = "KHELKUD"
+    SAMAJ = "SAMAJ"
+    SHIKSHA = "SHIKSHA"
+    PRAVIDHI = "PRAVIDHI"
+    MANORANJAN = "MANORANJAN"
+    JALAVAYU = "JALAVAYU"
+    APRADH = "APRADH"
+    ANTARRASHTRIYA = "ANTARRASHTRIYA"
+    PARYATAN = "PARYATAN"
+    VICHAR = "VICHAR"
 
 
 class Article(Base):
@@ -64,3 +53,4 @@ class Article(Base):
     source = relationship("Source", back_populates="articles")
 
     __table_args__ = (UniqueConstraint("fingerprint", name="uq_article_fingerprint"),)
+

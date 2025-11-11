@@ -10,7 +10,8 @@ def run_trending_scrape(sources: Optional[Sequence[str]] = None) -> dict:
     Scrapy settings and pipelines are applied. Returns a small status dict.
     """
     # Ensure the Scrapy project (news_spider) is importable
-    repo_root = Path(__file__).resolve().parents[3]  # points to project root
+    # Adjusted for new location (one level deeper under services/scraping)
+    repo_root = Path(__file__).resolve().parents[4]  # points to project root
     scrapy_project_path = repo_root / "scraper" / "news_spider"
     if str(scrapy_project_path) not in sys.path:
         sys.path.insert(0, str(scrapy_project_path))
@@ -29,4 +30,3 @@ def run_trending_scrape(sources: Optional[Sequence[str]] = None) -> dict:
     process.start(stop_after_crawl=True)
 
     return {"status": "success"}
-
