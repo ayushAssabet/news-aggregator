@@ -1,18 +1,19 @@
 from sqlalchemy.orm import Session
 from typing import Optional, List
+
 from ...schemas import ArticleCreate
 from ...models import Article
-from utils.dedupe import fingerprint
 from utils.reliability import reliability_score
 from ...repositories import article_repository as repo
 from ..ranking.ranking_service import record_article_rank, RankingConfig
 
 
 def create_article(db: Session, payload: ArticleCreate) -> Article:
-    fp = fingerprint(payload.title, str(payload.url))
-    exists = repo.get_by_fingerprint(db, fp)
+    # Quick exact URL dedupe for API-driven creation
+    exists = repo.get_by_url(db, str(payload.url))
     if exists:
         return exists
+
     data = {
         "title": payload.title,
         "url": str(payload.url),
@@ -20,7 +21,8 @@ def create_article(db: Session, payload: ArticleCreate) -> Article:
         "content": payload.content,
         "author": payload.author,
         "published_at": payload.published_at,
-        "fingerprint": fp,
+        "source": payload.source,
+        "embedding": payload.embedding,
         "reliability": reliability_score(
             str(payload.url), bool(payload.author), len(payload.content or "")
         ),

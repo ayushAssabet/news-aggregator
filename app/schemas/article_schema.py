@@ -11,6 +11,8 @@ class ArticleCreate(BaseModel):
     content: Optional[str] = None
     author: Optional[str] = None
     published_at: Optional[datetime] = None
+    source: Optional[str] = None
+    embedding: Optional[list[float]] = None
 
 
 class ArticleRead(BaseModel):
@@ -23,7 +25,8 @@ class ArticleRead(BaseModel):
     published_at: Optional[datetime] = None
     reliability: float
     weight: float
-    fingerprint: str
+    source: Optional[str] = None
+    redundant_news: Optional[list[str]] = None
 
     class Config:
         from_attributes = True

@@ -1,5 +1,4 @@
 from .article_model import Article, ArticleCategory
-from .source_model import Source
+from .user_model import User
 
-__all__ = ["Article", "ArticleCategory", "Source"]
-
+__all__ = ["Article", "ArticleCategory", "User"]

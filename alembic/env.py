@@ -6,6 +6,11 @@ if os.getenv('DATABASE_URL'):
     config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL'))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app.database.base import Base
+# Ensure models are imported so Base.metadata is populated for autogenerate
+try:  # keep migrations resilient if import fails in odd contexts
+    import app.models  # noqa: F401
+except Exception:
+    pass
 target_metadata = Base.metadata
 
 def run_migrations_offline():

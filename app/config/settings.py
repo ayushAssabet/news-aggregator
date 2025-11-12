@@ -40,5 +40,16 @@ class Settings(BaseSettings):
     # Redis / Celery
     redis_url: str = Field(default=os.getenv("REDIS_URL", "redis://redis:6379/0"))
 
+    # Auth / JWT
+    jwt_secret_key: str = Field(default=os.getenv("JWT_SECRET_KEY", "CHANGE_ME"))
+    jwt_algorithm: str = Field(default=os.getenv("JWT_ALGORITHM", "HS256"))
+    jwt_access_token_expires_minutes: int = Field(
+        default=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES_MINUTES", "60"))
+    )
+    jwt_issuer: str = Field(default=os.getenv("JWT_ISSUER", "news-api"))
+    jwt_refresh_token_expires_minutes: int = Field(
+        default=int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES_MINUTES", str(60 * 24 * 7)))
+    )
+
 
 settings = Settings()
