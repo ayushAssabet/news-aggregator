@@ -27,91 +27,159 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # Core settings
     # -------------------------------------------------------------------------
-    ENVIRONMENT: str = Field(
-        default=os.getenv("ENV", "development"),
-        description="Application environment (e.g., development, staging, production)",
-    )
-    LOG_LEVEL: str = Field(
-        default=os.getenv("LOG_LEVEL", "INFO"),
-        description="Logging level for the application",
-    )
+    ENVIRONMENT: str = Field(default=os.getenv("ENV", "development"))
+    LOG_LEVEL: str = Field(default=os.getenv("LOG_LEVEL", "INFO"))
+
+    # Backward-compatible lowercase accessors
+    @property
+    def environment(self) -> str:
+        return self.ENVIRONMENT
+
+    @property
+    def log_level(self) -> str:
+        return self.LOG_LEVEL
 
     # -------------------------------------------------------------------------
     # Web / API settings
     # -------------------------------------------------------------------------
-    CORS_ORIGINS_RAW: str = Field(
-        default=os.getenv("CORS_ORIGINS", "*"),
-        description="Comma-separated list of allowed CORS origins",
-    )
+    CORS_ORIGINS_RAW: str = Field(default=os.getenv("CORS_ORIGINS", "*"))
 
     @property
     def CORS_ORIGINS(self) -> List[str]:
-        """Return allowed CORS origins as a list."""
         origins = _split_csv(self.CORS_ORIGINS_RAW)
         return origins or ["*"]
 
-    SENTRY_DSN: Optional[str] = Field(
-        default=os.getenv("SENTRY_DSN"),
-        description="Sentry DSN for error tracking",
-    )
+    # Backward-compatible lowercase property
+    @property
+    def cors_origins(self) -> List[str]:
+        return self.CORS_ORIGINS
+
+    SENTRY_DSN: Optional[str] = Field(default=os.getenv("SENTRY_DSN"))
     SENTRY_TRACES_SAMPLE_RATE: float = Field(
-        default=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
-        description="Sampling rate for Sentry traces",
+        default=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1"))
     )
+
+    @property
+    def sentry_dsn(self) -> Optional[str]:
+        return self.SENTRY_DSN
+
+    @property
+    def sentry_traces_sample_rate(self) -> float:
+        return self.SENTRY_TRACES_SAMPLE_RATE
 
     # -------------------------------------------------------------------------
     # Database settings
     # -------------------------------------------------------------------------
-    DATABASE_URL: str = Field(
-        default=os.getenv("DATABASE_URL", "sqlite:///./app.db"),
-        description="SQLAlchemy database connection URL",
-    )
-    DB_POOL_SIZE: int = Field(
-        default=int(os.getenv("DB_POOL_SIZE", "5")),
-        description="Database connection pool size",
-    )
-    DB_MAX_OVERFLOW: int = Field(
-        default=int(os.getenv("DB_MAX_OVERFLOW", "10")),
-        description="Maximum number of connections to overflow beyond pool size",
-    )
+    DATABASE_URL: str = Field(default=os.getenv("DATABASE_URL", "sqlite:///./app.db"))
+    DB_POOL_SIZE: int = Field(default=int(os.getenv("DB_POOL_SIZE", "5")))
+    DB_MAX_OVERFLOW: int = Field(default=int(os.getenv("DB_MAX_OVERFLOW", "10")))
 
     ENABLE_AUTO_CREATE_TABLES: bool = Field(
-        default=os.getenv("AUTO_CREATE_TABLES", "false").lower()
-        in ("1", "true", "yes"),
-        description="Automatically create database tables if they don't exist",
+        default=os.getenv("AUTO_CREATE_TABLES", "false").lower() in ("1", "true", "yes")
     )
+
+    @property
+    def database_url(self) -> str:
+        return self.DATABASE_URL
+
+    @property
+    def db_pool_size(self) -> int:
+        return self.DB_POOL_SIZE
+
+    @property
+    def db_max_overflow(self) -> int:
+        return self.DB_MAX_OVERFLOW
+
+    @property
+    def enable_auto_create_tables(self) -> bool:
+        return self.ENABLE_AUTO_CREATE_TABLES
 
     # -------------------------------------------------------------------------
     # Redis / Celery settings
     # -------------------------------------------------------------------------
-    REDIS_URL: str = Field(
-        default=os.getenv("REDIS_URL", "redis://redis:6379/0"),
-        description="Redis connection URL for Celery and caching",
-    )
+    REDIS_URL: str = Field(default=os.getenv("REDIS_URL", "redis://redis:6379/0"))
+    SCRAPE_SCHEDULE_SECONDS: float = Field(default=float(os.getenv("SCRAPE_SCHEDULE_SECONDS", "360")))
+
+    @property
+    def redis_url(self) -> str:
+        return self.REDIS_URL
+
+    @property
+    def scrape_schedule_seconds(self) -> float:
+        return self.SCRAPE_SCHEDULE_SECONDS
 
     # -------------------------------------------------------------------------
     # JWT / Authentication settings
     # -------------------------------------------------------------------------
-    JWT_SECRET_KEY: str = Field(
-        default=os.getenv("JWT_SECRET_KEY", "CHANGE_ME"),
-        description="Secret key used for signing JWT tokens",
-    )
-    JWT_ALGORITHM: str = Field(
-        default=os.getenv("JWT_ALGORITHM", "HS256"),
-        description="Algorithm used for JWT encoding",
-    )
+    JWT_SECRET_KEY: str = Field(default=os.getenv("JWT_SECRET_KEY", "CHANGE_ME"))
+    JWT_ALGORITHM: str = Field(default=os.getenv("JWT_ALGORITHM", "HS256"))
     JWT_ACCESS_TOKEN_EXPIRES_MINUTES: int = Field(
-        default=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES_MINUTES", "60")),
-        description="Access token expiration time in minutes",
+        default=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES_MINUTES", "60"))
     )
-    JWT_ISSUER: str = Field(
-        default=os.getenv("JWT_ISSUER", "news-api"),
-        description="JWT issuer name",
-    )
+    JWT_ISSUER: str = Field(default=os.getenv("JWT_ISSUER", "news-api"))
     JWT_REFRESH_TOKEN_EXPIRES_MINUTES: int = Field(
-        default=int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES_MINUTES", str(60 * 24 * 7))),
-        description="Refresh token expiration time in minutes",
+        default=int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES_MINUTES", str(60 * 24 * 7)))
     )
+
+    @property
+    def jwt_secret_key(self) -> str:
+        return self.JWT_SECRET_KEY
+
+    @property
+    def jwt_algorithm(self) -> str:
+        return self.JWT_ALGORITHM
+
+    @property
+    def jwt_access_token_expires_minutes(self) -> int:
+        return self.JWT_ACCESS_TOKEN_EXPIRES_MINUTES
+
+    @property
+    def jwt_refresh_token_expires_minutes(self) -> int:
+        return self.JWT_REFRESH_TOKEN_EXPIRES_MINUTES
+
+    @property
+    def jwt_issuer(self) -> str:
+        return self.JWT_ISSUER
+
+    # -------------------------------------------------------------------------
+    # Gemini / Google and summarization settings
+    # -------------------------------------------------------------------------
+    GOOGLE_API_KEY: Optional[str] = Field(default=os.getenv("GOOGLE_API_KEY"))
+    GEMINI_API_KEY: Optional[str] = Field(default=os.getenv("GEMINI_API_KEY"))
+    GEMINI_EMBEDDING_MODEL: str = Field(default=os.getenv("GEMINI_EMBEDDING_MODEL", "text-embedding-004"))
+
+    SUMMARY_RETRY_ATTEMPTS: int = Field(default=int(os.getenv("SUMMARY_RETRY_ATTEMPTS", "3")))
+    SUMMARY_RETRY_BACKOFF_SECONDS: float = Field(default=float(os.getenv("SUMMARY_RETRY_BACKOFF_SECONDS", "1.0")))
+    SUMMARY_RETRY_MAX_BACKOFF_SECONDS: float = Field(default=float(os.getenv("SUMMARY_RETRY_MAX_BACKOFF_SECONDS", "8.0")))
+    SUMMARY_RETRY_JITTER: bool = Field(default=os.getenv("SUMMARY_RETRY_JITTER", "true").lower() in ("1", "true", "yes"))
+
+    @property
+    def google_api_key(self) -> Optional[str]:
+        return self.GOOGLE_API_KEY or self.GEMINI_API_KEY
+
+    @property
+    def gemini_api_key(self) -> Optional[str]:
+        return self.GEMINI_API_KEY or self.GOOGLE_API_KEY
+
+    @property
+    def gemini_embedding_model(self) -> str:
+        return self.GEMINI_EMBEDDING_MODEL
+
+    @property
+    def summary_retry_attempts(self) -> int:
+        return self.SUMMARY_RETRY_ATTEMPTS
+
+    @property
+    def summary_retry_backoff_seconds(self) -> float:
+        return self.SUMMARY_RETRY_BACKOFF_SECONDS
+
+    @property
+    def summary_retry_max_backoff_seconds(self) -> float:
+        return self.SUMMARY_RETRY_MAX_BACKOFF_SECONDS
+
+    @property
+    def summary_retry_jitter(self) -> bool:
+        return self.SUMMARY_RETRY_JITTER
 
 
 # Initialize global settings instance

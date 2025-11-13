@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, func
 
 from ...models import Article, ArticleCategory
+from ...config.settings import settings
 from .ranking_config import RankingConfig
 from .ranking_features import (
     recency_score as _base_recency_score,
@@ -217,7 +218,7 @@ def record_article_rank(
     cfg = cfg or RankingConfig()
     if redis is None:
         return None
-    url = redis_url or os.getenv("REDIS_URL")
+    url = redis_url or settings.redis_url
     if not url:
         return None
     try:
