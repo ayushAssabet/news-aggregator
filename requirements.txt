@@ -8,6 +8,7 @@ newspaper3k
 requests
 lxml[html_clean]
 selenium
+beautifulsoup4
 sentry-sdk
 pytest
 pydantic
@@ -20,3 +21,4 @@ passlib[bcrypt]
 python-jose
 pgvector
 numpy
+nepali-datetime

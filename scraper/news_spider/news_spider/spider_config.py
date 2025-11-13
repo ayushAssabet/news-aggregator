@@ -27,8 +27,10 @@ SITE_CONFIGS = {
         ],
         "date_selectors": [
             'meta[property="article:published_time"]::attr(content)',
+            ".published-date span::text",
+            ".post-byline span::text",
+            ".date::text",
             "time::attr(datetime)",
-            ".publish-date::text"
         ],
         "max_articles": 10
     },
@@ -69,7 +71,13 @@ SITE_CONFIGS = {
             ".detail-news p",
             ".entry-content p"
         ],
-        "title_selectors": ["h1::text", ".news-title::text"],
+        "title_selectors": [
+            ".news-title h1::text",
+            ".post-title h1::text",
+            ".detail-title::text",
+            "h1.news-title::text",
+            "h1.post-title::text",
+        ],
         "image_selectors": [
             'meta[property="og:image"]::attr(content)',
             ".news-image img::attr(src)",
@@ -127,7 +135,8 @@ SITE_CONFIGS = {
         ],
         "date_selectors": [
             'meta[property="article:published_time"]::attr(content)',
-            ".post-date::text",
+            ".article-posted-date::text",
+            ".article-posted-date img::attr(alt)",
             "time::attr(datetime)"
         ],
         "max_articles": 10
