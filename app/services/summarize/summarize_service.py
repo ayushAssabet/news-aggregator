@@ -4,6 +4,7 @@ from typing import Optional
 from dotenv import load_dotenv
 import time
 import random
+from app.config.settings import settings
 
 # Load .env if present
 load_dotenv()
@@ -25,10 +26,10 @@ _gemini_client = None
 
 
 def _retry_params():
-    attempts = max(1, int(os.getenv("SUMMARY_RETRY_ATTEMPTS", "3")))
-    base_backoff = max(0.0, float(os.getenv("SUMMARY_RETRY_BACKOFF_SECONDS", "1.0")))
-    max_backoff = max(base_backoff, float(os.getenv("SUMMARY_RETRY_MAX_BACKOFF_SECONDS", "8.0")))
-    jitter = os.getenv("SUMMARY_RETRY_JITTER", "true").lower() in ("1", "true", "yes")
+    attempts = max(1, int(settings.summary_retry_attempts))
+    base_backoff = max(0.0, float(settings.summary_retry_backoff_seconds))
+    max_backoff = max(base_backoff, float(settings.summary_retry_max_backoff_seconds))
+    jitter = bool(settings.summary_retry_jitter)
     return attempts, base_backoff, max_backoff, jitter
 
 
@@ -37,7 +38,7 @@ def _get_gemini_client():
     if _gemini_client is not None:
         return _gemini_client
     from google import genai  # lazy import
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = settings.gemini_api_key
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set")
     _gemini_client = genai.Client(api_key=api_key)

@@ -4,12 +4,10 @@ import os
 from functools import lru_cache
 from typing import Iterable, List
 
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.config.settings import settings
 
 # Default Gemini embedding model and dimension
-EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
+EMBEDDING_MODEL = settings.gemini_embedding_model
 # text-embedding-004 returns 768-dimensional vectors
 EMBEDDING_DIM = 3072
 
@@ -19,7 +17,7 @@ def _get_gemini_client():
     """Global singleton Gemini client instance."""
     from google import genai  # lazy import to avoid hard dep at import time
 
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = settings.gemini_api_key
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set")
     return genai.Client(api_key=api_key)

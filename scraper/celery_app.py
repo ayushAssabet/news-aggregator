@@ -1,8 +1,8 @@
 from celery import Celery
-import os
+from app.config.settings import settings
 
-redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-schedule_seconds = float(os.getenv("SCRAPE_SCHEDULE_SECONDS", "3600"))
+redis_url = settings.redis_url
+schedule_seconds = float(settings.scrape_schedule_seconds)
 
 celery = Celery(
     "news_scrap_task",

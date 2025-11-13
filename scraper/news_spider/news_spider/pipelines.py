@@ -29,7 +29,7 @@ class StoreArticlePipeline:
 
     @classmethod
     def from_crawler(cls, crawler):
-        return cls(os.getenv("DATABASE_URL"))
+        return cls(settings.database_url)
 
     def open_spider(self, spider):
         if settings.enable_auto_create_tables:
