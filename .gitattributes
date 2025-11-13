@@ -1,0 +1,36 @@
+# Normalize line endings automatically for text files
+* text=auto
+
+# Enforce LF where it matters (POSIX tools, containers)
+*.py   text eol=lf
+*.sh   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+Dockerfile* text eol=lf
+
+# Windows scripts can use CRLF locally
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Treat common binary formats as binary to avoid EOL normalization
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.gz   binary
+
+# GitHub linguist tweaks
+alembic/versions/* linguist-generated
+
+# Prefer union merge on frequently appended files
+requirements.txt merge=union
+docker-compose.yml merge=union
+
+# Exclude certain meta folders from archive exports
+/.github export-ignore
+/.vscode export-ignore
+/.env* export-ignore
+
