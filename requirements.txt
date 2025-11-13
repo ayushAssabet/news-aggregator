@@ -19,3 +19,4 @@ python-dotenv
 passlib[bcrypt]
 python-jose
 pgvector
+numpy
