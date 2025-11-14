@@ -9,6 +9,7 @@ requests
 lxml[html_clean]
 selenium
 beautifulsoup4
+psutil
 sentry-sdk
 pytest
 pydantic
