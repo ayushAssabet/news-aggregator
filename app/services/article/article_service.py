@@ -5,7 +5,6 @@ from ...schemas import ArticleCreate
 from ...models import Article
 from utils.reliability import reliability_score
 from ...repositories import article_repository as repo
-from ..trending.trending_service import record_article_rank, RankingConfig
 
 
 def create_article(db: Session, payload: ArticleCreate) -> Article:
@@ -28,11 +27,6 @@ def create_article(db: Session, payload: ArticleCreate) -> Article:
         ),
     }
     created = repo.create(db, data)
-    # Record rank in Redis (best-effort; ignore failures)
-    try:
-        record_article_rank(created, db, cfg=RankingConfig())
-    except Exception:
-        pass
     return created
 
 
