@@ -23,8 +23,8 @@ def update_trending_scores(db: Session) -> dict[str, int]:
             published_at, 
             source, 
             category, 
-            COALESCE(similar_news, '[]') AS similar_news
-        FROM news
+            redundant_news
+        FROM articles
         WHERE published_at > NOW() - INTERVAL '48 hours'
         """
     )
@@ -39,7 +39,7 @@ def update_trending_scores(db: Session) -> dict[str, int]:
             published_at=item.published_at,
             source=item.source,
             category=item.category,
-            similar_news=item.similar_news,
+            similar_news=item.redundant_news or [],
         )
 
         updates.append(
@@ -87,13 +87,13 @@ def update_trending_scores(db: Session) -> dict[str, int]:
 
         update_query = text(
             f"""
-            UPDATE news
+            UPDATE articles
             SET 
                 trending_score = data.score,
                 coverage_count = data.count,
                 last_score_update = NOW()
             FROM (VALUES {values_sql}) AS data(id, score, count)
-            WHERE news.id = data.id
+            WHERE articles.id = data.id
             """
         )
 

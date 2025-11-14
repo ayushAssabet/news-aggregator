@@ -13,6 +13,8 @@ class ArticleCreate(BaseModel):
     published_at: Optional[datetime] = None
     source: Optional[str] = None
     embedding: Optional[list[float]] = None
+    trending_score: float
+    reliability: float
 
 
 class ArticleRead(BaseModel):
@@ -24,7 +26,7 @@ class ArticleRead(BaseModel):
     author: Optional[str] = None
     published_at: Optional[datetime] = None
     reliability: float
-    weight: float
+    trending_score: float
     source: Optional[str] = None
     redundant_news: Optional[list[str]] = None
 

@@ -37,7 +37,9 @@ class Article(Base):
     author: Mapped[str | None] = mapped_column(String(255))
     published_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True))
     reliability: Mapped[float] = mapped_column(Float, default=0.0)
-    weight: Mapped[float] = mapped_column(Float, default=0.0)
+    trending_score: Mapped[float] = mapped_column(
+        "trending_score", Float, default=0.0
+    )
     category: Mapped[ArticleCategory] = mapped_column(
         Enum(ArticleCategory, name="article_category"), default=ArticleCategory.MUKHYA_SAMACHAR, nullable=False
     )

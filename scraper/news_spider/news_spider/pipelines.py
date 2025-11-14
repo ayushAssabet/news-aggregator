@@ -149,7 +149,7 @@ class StoreArticlePipeline:
                 "reliability": reliability_score(
                     str(url), bool(item.get("author")), len(content or "")
                 ),
-                "weight": trending_score,
+                "trending_score": trending_score,
             }
 
             repo.create(s, data)

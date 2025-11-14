@@ -45,7 +45,7 @@ def _get_gemini_client():
     return _gemini_client
 
 
-async def generate_summary(article: str, model: str = "gemini-2.0-flash") -> str:
+async def generate_summary(article: str, model: str = "gemini-2.5-flash") -> str:
     """
     Generate a concise summary of a given article using Google Gemini.
     Returns a clean text summary in the same language as the input.
