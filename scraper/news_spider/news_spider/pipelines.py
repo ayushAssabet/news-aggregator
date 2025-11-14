@@ -16,6 +16,7 @@ from app.repositories import article_repository as repo
 from app.models import Article
 from app.services.summarize.summarize_service import generate_summary
 from app.services.embedding.model_provider import embed_text
+from app.services.trending import trending_engine
 from app.config.settings import settings
 
 
@@ -60,6 +61,7 @@ class StoreArticlePipeline:
             title = item.get("title") or ""
             content = item.get("content") or item.get("text") or ""
             combined_text = f"{title}\n\n{content}" if content else title
+            incoming_source = (item.get("source") or "").strip() or None
 
             # --- Generate and normalize embedding ---
             new_emb = embed_text(combined_text)
@@ -80,13 +82,19 @@ class StoreArticlePipeline:
             distance_expr = Article.embedding.cosine_distance(emb_vec)
             similarity_expr = (1 - distance_expr).label("sim")
 
+            # Only consider potential duplicates from the same source; allow
+            # similar stories from different sources to be stored separately.
+            where_clauses = [
+                Article.created_at >= start,
+                Article.created_at < end,
+                Article.embedding.is_not(None),
+            ]
+            if incoming_source is not None:
+                where_clauses.append(Article.source == incoming_source)
+
             candidate = s.execute(
                 select(Article, similarity_expr)
-                .where(
-                    Article.created_at >= start,
-                    Article.created_at < end,
-                    Article.embedding.is_not(None),
-                )
+                .where(*where_clauses)
                 .order_by(similarity_expr.desc())
                 .limit(1)
             ).first()
@@ -113,6 +121,22 @@ class StoreArticlePipeline:
                 summary = ""
             from utils.reliability import reliability_score
 
+            # --- Trending score (per-article) ---
+            try:
+                published_at = item.get("published_at") or now
+                source_for_trending = incoming_source or (item.get("source") or "")
+                category_for_trending = item.get("category") or ""
+                score_data = trending_engine.calculate_trending_score(
+                    published_at=published_at,
+                    source=source_for_trending,
+                    category=category_for_trending,
+                    similar_news=[],
+                )
+                trending_score = score_data["trending_score"]
+            except Exception as e:
+                spider.logger.warning(f"Trending score calculation failed: {e}")
+                trending_score = 0.0
+
             data = {
                 "title": title,
                 "url": str(url),
@@ -125,6 +149,7 @@ class StoreArticlePipeline:
                 "reliability": reliability_score(
                     str(url), bool(item.get("author")), len(content or "")
                 ),
+                "weight": trending_score,
             }
 
             repo.create(s, data)

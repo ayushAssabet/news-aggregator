@@ -2,6 +2,18 @@ FROM python:3.11-slim
 WORKDIR /app
 ENV PYTHONPATH=/app
 COPY requirements.txt .
-RUN apt-get update && apt-get install -y libxml2-dev libxslt1-dev libjpeg-dev zlib1g-dev && rm -rf /var/lib/apt/lists/* && pip install -r requirements.txt
+# System deps for lxml/newspaper3k and headless Chromium + chromedriver for Selenium
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libxml2-dev libxslt1-dev libjpeg-dev zlib1g-dev \
+        chromium chromium-driver fonts-liberation \
+        libnss3 libxss1 libasound2 libgbm1 libgtk-3-0 && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install -r requirements.txt
+
+# Optional envs to help some setups locate binaries
+ENV CHROME_BIN=/usr/bin/chromium \
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver
+
 COPY . .
 CMD ["bash","-lc","cd scraper/news_spider && scrapy crawl news_spider"]

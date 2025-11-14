@@ -5,7 +5,7 @@ from ...schemas import ArticleCreate
 from ...models import Article
 from utils.reliability import reliability_score
 from ...repositories import article_repository as repo
-from ..ranking.ranking_service import record_article_rank, RankingConfig
+from ..trending.trending_service import record_article_rank, RankingConfig
 
 
 def create_article(db: Session, payload: ArticleCreate) -> Article:

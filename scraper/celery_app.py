@@ -21,5 +21,9 @@ celery.conf.update(
             "task": "scraper.tasks.run_generic_spider",
             "schedule": schedule_seconds,
         },
+        "update-trending-scores": {
+            "task": "scraper.tasks.update_trending_scores",
+            "schedule": schedule_seconds,
+        },
     },
 )
