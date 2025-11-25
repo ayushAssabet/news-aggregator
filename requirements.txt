@@ -17,6 +17,7 @@ pydantic-settings
 celery
 redis
 google-genai
+tavily
 python-dotenv
 passlib[bcrypt]
 python-jose

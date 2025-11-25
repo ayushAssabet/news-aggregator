@@ -22,9 +22,7 @@ def create_article(db: Session, payload: ArticleCreate) -> Article:
         "published_at": payload.published_at,
         "source": payload.source,
         "embedding": payload.embedding,
-        "reliability": reliability_score(
-            str(payload.url), bool(payload.author), len(payload.content or "")
-        ),
+        "reliability": reliability_score(payload.model_dump()),
     }
     created = repo.create(db, data)
     return created
