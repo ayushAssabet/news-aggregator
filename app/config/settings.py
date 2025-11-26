@@ -163,6 +163,7 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: Optional[str] = Field(default=os.getenv("GOOGLE_API_KEY"))
     GEMINI_API_KEY: Optional[str] = Field(default=os.getenv("GEMINI_API_KEY"))
     GEMINI_EMBEDDING_MODEL: str = Field(default=os.getenv("GEMINI_EMBEDDING_MODEL", "text-embedding-004"))
+    TAVILY_API_KEY: Optional[str] = Field(default=os.getenv("TAVILY_API_KEY"))
 
     SUMMARY_RETRY_ATTEMPTS: int = Field(default=int(os.getenv("SUMMARY_RETRY_ATTEMPTS", "3")))
     SUMMARY_RETRY_BACKOFF_SECONDS: float = Field(default=float(os.getenv("SUMMARY_RETRY_BACKOFF_SECONDS", "1.0")))
@@ -176,6 +177,10 @@ class Settings(BaseSettings):
     @property
     def gemini_api_key(self) -> Optional[str]:
         return self.GEMINI_API_KEY or self.GOOGLE_API_KEY
+
+    @property
+    def tavily_api_key(self) -> Optional[str]:
+        return self.TAVILY_API_KEY
 
     @property
     def gemini_embedding_model(self) -> str:

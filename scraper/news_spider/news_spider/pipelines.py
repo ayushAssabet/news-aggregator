@@ -36,6 +36,7 @@ class StoreArticlePipeline:
         if settings.enable_auto_create_tables:
             try:
                 from app.database.base import Base
+
                 Base.metadata.create_all(engine)
             except Exception as e:
                 spider.logger.warning(f"Auto table creation skipped: {e}")
@@ -106,7 +107,9 @@ class StoreArticlePipeline:
                     return item
                 if sim is not None and sim > 0.9:
                     append_text = content or combined_text
-                    existing.redundant_news = (existing.redundant_news or []) + [append_text]
+                    existing.redundant_news = (existing.redundant_news or []) + [
+                        append_text
+                    ]
                     s.add(existing)
                     s.commit()
                     spider.logger.info(f"Merged redundant article (sim={sim:.3f})")
@@ -115,6 +118,7 @@ class StoreArticlePipeline:
             # --- New article ---
             try:
                 import asyncio
+
                 summary = asyncio.run(generate_summary(content))
             except Exception as e:
                 spider.logger.warning(f"Summary generation failed: {e}")
@@ -146,9 +150,7 @@ class StoreArticlePipeline:
                 "published_at": item.get("published_at") or None,
                 "source": item.get("source"),
                 "embedding": new_emb,  # This should be the flattened list
-                "reliability": reliability_score(
-                    str(url), bool(item.get("author")), len(content or "")
-                ),
+                "reliability": reliability_score(item),
                 "trending_score": trending_score,
             }
 
