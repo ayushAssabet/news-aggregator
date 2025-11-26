@@ -6,6 +6,11 @@ from typing import List, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+DEFAULT_LOCAL_CORS_ORIGINS = [
+    "http://localhost:8000/",   
+    "http://localhost:5173",
+]
+
 
 def _split_csv(value: str) -> List[str]:
     """Helper function to split comma-separated values into a list."""
@@ -42,12 +47,23 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # Web / API settings
     # -------------------------------------------------------------------------
-    CORS_ORIGINS_RAW: str = Field(default=os.getenv("CORS_ORIGINS", "*"))
+    CORS_ORIGINS_RAW: str = Field(default=os.getenv("CORS_ORIGINS", ""))
 
     @property
     def CORS_ORIGINS(self) -> List[str]:
-        origins = _split_csv(self.CORS_ORIGINS_RAW)
-        return origins or ["*"]
+        raw = (self.CORS_ORIGINS_RAW or "").strip()
+        if raw == "*":
+            return ["*"]
+
+        origins = _split_csv(raw)
+        merged_origins = origins.copy()
+
+        # Always allow common localhost origins for local development
+        for origin in DEFAULT_LOCAL_CORS_ORIGINS:
+            if origin not in merged_origins:
+                merged_origins.append(origin)
+
+        return merged_origins or DEFAULT_LOCAL_CORS_ORIGINS
 
     # Backward-compatible lowercase property
     @property

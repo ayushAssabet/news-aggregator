@@ -7,6 +7,10 @@ from .auth_schema import (
     TokenPair,
     RefreshRequest,
 )
+from .user_preference_schema import (
+    UserPreferenceRead,
+    UserPreferenceInitRequest,
+)
 
 __all__ = [
     "ArticleCreate",
@@ -17,4 +21,6 @@ __all__ = [
     "Token",
     "TokenPair",
     "RefreshRequest",
+    "UserPreferenceRead",
+    "UserPreferenceInitRequest",
 ]

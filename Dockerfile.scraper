@@ -5,9 +5,9 @@ COPY requirements.txt .
 # System deps for lxml/newspaper3k and headless Chromium + chromedriver for Selenium
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        libxml2-dev libxslt1-dev libjpeg-dev zlib1g-dev \
-        chromium chromium-driver fonts-liberation \
-        libnss3 libxss1 libasound2 libgbm1 libgtk-3-0 && \
+    libxml2-dev libxslt1-dev libjpeg-dev zlib1g-dev \
+    chromium chromium-driver fonts-liberation \
+    libnss3 libxss1 libasound2 libgbm1 libgtk-3-0 && \
     rm -rf /var/lib/apt/lists/* && \
     pip install -r requirements.txt
 

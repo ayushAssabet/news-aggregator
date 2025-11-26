@@ -29,10 +29,10 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/refresh", response_model=TokenPair)
-def refresh(payload: RefreshRequest):
+def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
     from ..services.auth import auth_service
 
-    pair = auth_service.exchange_refresh_token_for_pair(payload.refresh_token)
+    pair = auth_service.exchange_refresh_token_for_pair(db, payload.refresh_token)
     if not pair:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
     return pair

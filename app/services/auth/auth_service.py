@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from ...config.settings import settings
 from ...repositories import user_repository as repo
+from ...repositories import refresh_token_repository as refresh_repo
 from ...models import User
 
 
@@ -23,7 +25,13 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def _create_token(subject: str, *, expires_minutes: int, token_type: str, extra_claims: Optional[Dict[str, Any]] = None) -> str:
+def _create_token(
+    subject: str,
+    *,
+    expires_minutes: int,
+    token_type: str,
+    extra_claims: Optional[Dict[str, Any]] = None,
+) -> str:
     now = datetime.now(timezone.utc)
     to_encode: Dict[str, Any] = {
         "sub": subject,
@@ -34,10 +42,17 @@ def _create_token(subject: str, *, expires_minutes: int, token_type: str, extra_
     }
     if extra_claims:
         to_encode.update(extra_claims)
-    return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(
+        to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
 
 
-def create_access_token(subject: str, *, expires_minutes: Optional[int] = None, extra_claims: Optional[Dict[str, Any]] = None) -> str:
+def create_access_token(
+    subject: str,
+    *,
+    expires_minutes: Optional[int] = None,
+    extra_claims: Optional[Dict[str, Any]] = None,
+) -> str:
     return _create_token(
         subject,
         expires_minutes=expires_minutes or settings.jwt_access_token_expires_minutes,
@@ -46,12 +61,18 @@ def create_access_token(subject: str, *, expires_minutes: Optional[int] = None, 
     )
 
 
-def create_refresh_token(subject: str, *, expires_minutes: Optional[int] = None) -> str:
+def create_refresh_token(
+    subject: str, *, expires_minutes: Optional[int] = None
+) -> str:
     return _create_token(
         subject,
         expires_minutes=expires_minutes or settings.jwt_refresh_token_expires_minutes,
         token_type="refresh",
     )
+
+
+def _hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def decode_token(token: str) -> Dict[str, Any]:
@@ -74,12 +95,16 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     return user
 
 
-def register_user(db: Session, *, email: str, password: str, full_name: Optional[str] = None) -> User:
+def register_user(
+    db: Session, *, email: str, password: str, full_name: Optional[str] = None
+) -> User:
     existing = repo.get_by_email(db, email)
     if existing:
         raise ValueError("User with this email already exists")
     hashed = get_password_hash(password)
-    return repo.create(db, {"email": email, "full_name": full_name, "hashed_password": hashed})
+    return repo.create(
+        db, {"email": email, "full_name": full_name, "hashed_password": hashed}
+    )
 
 
 def get_user_from_token(db: Session, token: str) -> Optional[User]:
@@ -97,7 +122,27 @@ def get_user_from_token(db: Session, token: str) -> Optional[User]:
         return None
 
 
-def exchange_refresh_token_for_pair(refresh_token: str) -> Optional[Dict[str, str]]:
+def create_token_pair(db: Session, user: User) -> Dict[str, str]:
+    subject = str(user.id)
+    access = create_access_token(subject)
+    refresh = create_refresh_token(subject)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(
+        minutes=settings.jwt_refresh_token_expires_minutes
+    )
+    token_hash = _hash_refresh_token(refresh)
+    refresh_repo.create(
+        db,
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+    )
+    return {"access_token": access, "refresh_token": refresh}
+
+
+def exchange_refresh_token_for_pair(
+    db: Session, refresh_token: str
+) -> Optional[Dict[str, str]]:
     try:
         payload = decode_token(refresh_token)
         if payload.get("type") != "refresh":
@@ -105,8 +150,26 @@ def exchange_refresh_token_for_pair(refresh_token: str) -> Optional[Dict[str, st
         sub = payload.get("sub")
         if not sub:
             return None
-        access = create_access_token(sub)
-        new_refresh = create_refresh_token(sub)
-        return {"access_token": access, "refresh_token": new_refresh}
+        try:
+            user_id = int(sub)
+        except ValueError:
+            return None
+
+        token_hash = _hash_refresh_token(refresh_token)
+        stored = refresh_repo.get_by_token_hash(db, token_hash)
+        if not stored:
+            return None
+        if stored.revoked_at is not None:
+            return None
+        if stored.expires_at < datetime.now(timezone.utc):
+            return None
+
+        refresh_repo.revoke(db, stored)
+
+        user = repo.get_by_id(db, user_id)
+        if not user or user.deleted_at is not None:
+            return None
+
+        return create_token_pair(db, user)
     except JWTError:
         return None
