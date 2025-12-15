@@ -9,6 +9,7 @@ from pydantic_settings import BaseSettings
 DEFAULT_LOCAL_CORS_ORIGINS = [
     "http://localhost:8000/",   
     "http://localhost:5173",
+    "https://news-aggregator-frontend-delta.vercel.app/"
 ]
 
 
