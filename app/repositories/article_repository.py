@@ -19,7 +19,7 @@ def create(db: Session, data: dict) -> Article:
 def list_articles(db: Session, limit: int = 50, offset: int = 0) -> List[Article]:
     stmt = (
         select(Article)
-        .order_by(Article.id.desc())
+        .order_by(Article.published_at.desc(), Article.trending_score.desc())
         .limit(limit)
         .offset(offset)
     )

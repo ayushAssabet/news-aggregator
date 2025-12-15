@@ -63,6 +63,7 @@ class StoreArticlePipeline:
             content = item.get("content") or item.get("text") or ""
             combined_text = f"{title}\n\n{content}" if content else title
             incoming_source = (item.get("source") or "").strip() or None
+            thumbnail = item.get("thumbnail") or item.get("image")
 
             # --- Generate and normalize embedding ---
             new_emb = embed_text(combined_text)
@@ -144,6 +145,7 @@ class StoreArticlePipeline:
             data = {
                 "title": title,
                 "url": str(url),
+                "thumbnail": str(thumbnail) if thumbnail else None,
                 "summary": summary,
                 "content": content or None,
                 "author": item.get("author"),

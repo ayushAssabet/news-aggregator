@@ -32,6 +32,7 @@ class Article(Base):
     )
     title: Mapped[str] = mapped_column(String(512))
     url: Mapped[str] = mapped_column(String(1024), unique=True)
+    thumbnail: Mapped[str | None] = mapped_column(String(1024))
     summary: Mapped[str | None] = mapped_column(Text())
     content: Mapped[str | None] = mapped_column(Text())
     author: Mapped[str | None] = mapped_column(String(255))

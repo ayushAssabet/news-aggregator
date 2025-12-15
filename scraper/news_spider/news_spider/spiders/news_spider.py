@@ -255,6 +255,7 @@ class NewsSpider(scrapy.Spider):
                 published_at=publish_date,
                 extras={
                     "image": image_url,
+                    "thumbnail": image_url,
                     "source": self.get_source_name(url),
                     "method": "fetch_dynamic_article",
                 },
@@ -384,7 +385,12 @@ class NewsSpider(scrapy.Spider):
                     summary=getattr(article, "summary", "") or "",
                     author=(article.authors[0] if getattr(article, "authors", []) else None),
                     published_at=publish_date,
-                    extras={"image": image_url, "source": self.get_source_name(url), "method": "newspaper3k+site_specific"},
+                    extras={
+                        "image": image_url,
+                        "thumbnail": image_url,
+                        "source": self.get_source_name(url),
+                        "method": "newspaper3k+site_specific",
+                    },
                 )
             else:
                 self.logger.warning(f"Insufficient content for {url}")
@@ -471,6 +477,9 @@ class NewsSpider(scrapy.Spider):
         }
         if extras and isinstance(extras, dict):
             item.update(extras)
+            thumb = extras.get("thumbnail") or extras.get("image")
+            if thumb:
+                item["thumbnail"] = thumb
         return item
 
     def closed(self, reason):

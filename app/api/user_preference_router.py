@@ -5,13 +5,13 @@ from ..database.db import get_db
 from ..schemas import UserPreferenceRead, UserPreferenceInitRequest
 from ..controllers import user_preference_controller
 from ..middleware.auth_middleware import require_user
-from ..models import User, ArticleCategory
+from ..models import User
 
 
 router = APIRouter(prefix="/preferences", tags=["preferences"])
 
 
-@router.get("/categories", response_model=list[ArticleCategory])
+@router.get("/categories", response_model=dict[str, str])
 def list_available_categories():
     return user_preference_controller.list_available_categories()
 

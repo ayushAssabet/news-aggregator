@@ -16,6 +16,7 @@ def create_article(db: Session, payload: ArticleCreate) -> Article:
     data = {
         "title": payload.title,
         "url": str(payload.url),
+        "thumbnail": str(payload.thumbnail) if payload.thumbnail else None,
         "summary": payload.summary,
         "content": payload.content,
         "author": payload.author,

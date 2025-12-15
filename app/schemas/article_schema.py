@@ -7,6 +7,7 @@ import uuid
 class ArticleCreate(BaseModel):
     title: str
     url: HttpUrl
+    thumbnail: Optional[HttpUrl] = None
     summary: Optional[str] = None
     content: Optional[str] = None
     author: Optional[str] = None
@@ -21,6 +22,7 @@ class ArticleRead(BaseModel):
     id: uuid.UUID
     title: str
     url: HttpUrl
+    thumbnail: Optional[HttpUrl] = None
     summary: Optional[str] = None
     content: Optional[str] = None
     author: Optional[str] = None
