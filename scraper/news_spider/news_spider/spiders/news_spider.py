@@ -1,5 +1,6 @@
 import scrapy
 from scrapy import Selector
+from scraper.news_spider.news_spider.spiders.selenium_spider import fetch_dynamic_article
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -11,360 +12,20 @@ from urllib.parse import urljoin, urlparse
 import re
 import requests
 import unicodedata
-from datetime import datetime
+from datetime import datetime , timezone
+
+from utils.nepali_date_parser import parse_nepali_date
+from ..spider_config import SITE_CONFIGS as DEFAULT_SITE_CONFIGS, CUSTOM_SETTINGS
 
 
 class NewsSpider(scrapy.Spider):
     name = "news_spider"
     MIN_CONTENT_LENGTH = 60
+    # Website-specific configurations (imported)
+    SITE_CONFIGS = DEFAULT_SITE_CONFIGS
 
-    # Website-specific configurations
-    SITE_CONFIGS = {
-        "ekantipur": {
-            "start_urls": ["https://ekantipur.com/news"],
-            "article_links": [
-                "article a::attr(href)",
-                ".teaser a::attr(href)",
-                ".news-title a::attr(href)",
-            ],
-            "content_selectors": [
-                ".description p",
-                ".detail-content p",
-                ".news-detail p"
-            ],
-            "title_selectors": ["h1::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".article-image img::attr(src)",
-                ".detail-image img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                "time::attr(datetime)",
-                ".publish-date::text"
-            ],
-            "max_articles": 10
-        },
-        "annapurnapost": {
-            "start_urls": ["https://annapurnapost.com/category/latest-news"],
-            "article_links": [
-                ".grid__card a::attr(href)",
-                "h3 a::attr(href)",
-                ".news-list a::attr(href)",
-            ],
-            "content_selectors": [
-                ".news-details p",
-                ".description p",
-                ".content p"
-            ],
-            "title_selectors": ["h1::text", ".news-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".featured-image img::attr(src)",
-                ".news-image img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".publish-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 8
-        },
-        "ratopati": {
-            "start_urls": ["https://www.ratopati.com/category/main-news"],
-            "article_links": [
-                ".news-item a::attr(href)",
-                ".post-title a::attr(href)",
-                "article a::attr(href)",
-            ],
-            "content_selectors": [
-                ".news-content p",
-                ".detail-news p",
-                ".entry-content p"
-            ],
-            "title_selectors": ["h1::text", ".news-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".news-image img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".post-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 8
-        },
-        "setopati": {
-            "start_urls": ["https://www.setopati.com/politics"],
-            "article_links": [
-                "h2.title a::attr(href)",
-                ".list__item a::attr(href)",
-                ".news-list a::attr(href)",
-            ],
-            "content_selectors": [
-                ".news-details p",
-                ".description p",
-                ".content p"
-            ],
-            "title_selectors": ["h1::text", ".news-headline::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".featured-image img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".published-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 8
-        },
-        "onlinekhabar": {
-            "start_urls": ["https://www.onlinekhabar.com/content/news"],
-            "article_links": [
-                ".ok-news-post a::attr(href)",
-                ".post__title a::attr(href)",
-                ".news-list a::attr(href)",
-            ],
-            "content_selectors": [
-                ".news-details p",
-                ".description p",
-                ".main__content p"
-            ],
-            "title_selectors": ["h1::text", ".news-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".featured-image img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".post-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 10
-        },
-        "nagariknews": {
-            "start_urls": ["https://nagariknews.nagariknetwork.com"],
-            "article_links": [
-                ".news-list a::attr(href)",
-                "article a::attr(href)",
-                ".title a::attr(href)",
-            ],
-            "content_selectors": [
-                ".news-content p",
-                ".detail-content p",
-                ".article-content p"
-            ],
-            "title_selectors": ["h1::text", ".news-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".news-image img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".publish-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 8
-        },
-        "nayapatrika": {
-            "start_urls": ["https://nayapatrikadaily.com/news"],
-            "article_links": [
-                ".news-item a::attr(href)",
-                ".title a::attr(href)",
-                "article a::attr(href)",
-            ],
-            "content_selectors": [
-                ".news-details p",
-                ".content p",
-                ".article-content p"
-            ],
-            "title_selectors": ["h1::text", ".news-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".featured-image img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".post-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 6
-        },
-        "newsofnepal": {
-            "start_urls": ["https://newsofnepal.com/category/news"],
-            "article_links": [
-                ".news-item a::attr(href)",
-                ".post-title a::attr(href)",
-                "article a::attr(href)",
-            ],
-            "content_selectors": [
-                ".entry-content p",
-                ".news-content p",
-                ".post-content p"
-            ],
-            "title_selectors": ["h1::text", ".entry-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".post-thumbnail img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".post-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 5
-        },
-        "osnepal": {
-            "start_urls": ["https://osnepal.com/category/news"],
-            "article_links": [
-                ".news-item a::attr(href)",
-                ".entry-title a::attr(href)",
-                "article a::attr(href)",
-            ],
-            "content_selectors": [
-                ".entry-content p",
-                ".news-content p",
-                ".post-content p"
-            ],
-            "title_selectors": ["h1::text", ".entry-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".post-image img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".posted-on::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 5
-        },
-        "rajdhanidaily": {
-            "start_urls": ["https://rajdhanidaily.com/category/news"],
-            "article_links": [
-                ".news-list a::attr(href)",
-                ".post-title a::attr(href)",
-                "article a::attr(href)",
-            ],
-            "content_selectors": [
-                ".entry-content p",
-                ".news-content p",
-                ".post-content p"
-            ],
-            "title_selectors": ["h1::text", ".entry-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".post-thumbnail img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".post-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 5
-        },
-        "lokantar": {
-            "start_urls": ["https://lokantar.com/category/news"],
-            "article_links": [
-                ".news-item a::attr(href)",
-                ".entry-title a::attr(href)",
-                "article a::attr(href)",
-            ],
-            "content_selectors": [
-                ".entry-content p",
-                ".news-content p",
-                ".post-content p"
-            ],
-            "title_selectors": ["h1::text", ".entry-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".post-thumbnail img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".post-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 5
-        },
-        "souryaonline": {
-            "start_urls": ["https://souryaonline.com/category/news"],
-            "article_links": [
-                ".news-list a::attr(href)",
-                ".post-title a::attr(href)",
-                "article a::attr(href)",
-            ],
-            "content_selectors": [
-                ".entry-content p",
-                ".news-content p",
-                ".post-content p"
-            ],
-            "title_selectors": ["h1::text", ".entry-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".post-image img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".post-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 5
-        },
-        "ujyaaloonline": {
-            "start_urls": ["https://ujyaaloonline.com/news"],
-            "article_links": [
-                ".news-item a::attr(href)",
-                ".title a::attr(href)",
-                "article a::attr(href)",
-            ],
-            "content_selectors": [
-                ".news-details p",
-                ".content p",
-                ".article-content p"
-            ],
-            "title_selectors": ["h1::text", ".news-title::text"],
-            "image_selectors": [
-                'meta[property="og:image"]::attr(content)',
-                ".featured-image img::attr(src)",
-                "article img::attr(src)"
-            ],
-            "date_selectors": [
-                'meta[property="article:published_time"]::attr(content)',
-                ".post-date::text",
-                "time::attr(datetime)"
-            ],
-            "max_articles": 5
-        },
-    }
-
-    custom_settings = {
-        "FEEDS": {
-            "trending_news.json": {
-                "format": "json",
-                "encoding": "utf8",
-                "indent": 4,
-            }
-        },
-        "LOG_LEVEL": "INFO",
-        "ROBOTSTXT_OBEY": False,
-        "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "DOWNLOAD_DELAY": 1,
-        "CONCURRENT_REQUESTS": 2,
-        "AUTOTHROTTLE_ENABLED": True,
-        "RETRY_TIMES": 2,
-        "HTTPERROR_ALLOWED_CODES": [404, 403, 500],
-        "HTTPERROR_ALLOW_ALL": True,
-    }
+    # Scrapy per-spider settings (imported)
+    custom_settings = CUSTOM_SETTINGS
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -441,9 +102,13 @@ class NewsSpider(scrapy.Spider):
             WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2)
             html = self.driver.page_source
-            enhanced_response = response.replace(body=html)
+
+            # IMPORTANT FIX
+            response = response.replace(body=html)
+            enhanced_response = response
             article_links = self.extract_article_links(enhanced_response, site_config)
-            max_articles = site_config.get("max_articles", 8)
+
+            max_articles = site_config.get("max_articles", 100)
 
             self.logger.info(
                 f"Found {len(article_links)} potential articles on {response.url}, taking {max_articles}"
@@ -468,7 +133,7 @@ class NewsSpider(scrapy.Spider):
         for link in article_links[:max_articles]:
             yield scrapy.Request(
                 link,
-                callback=self.parse_article_fallback,
+                callback=self.parse_article,
                 errback=self.errback_handler,
                 meta={"site_config": site_config},
             )
@@ -529,8 +194,8 @@ class NewsSpider(scrapy.Spider):
 
         site_config = response.meta.get("site_config", {})
 
-        if "ekantipur.com" in response.url:
-            yield from self.parse_kantipur_article(response.url, site_config)
+        if "ekantipur.com" in response.url or "nagariknetwork.com" in response.url:
+            yield from self.parse_dynamic_article(response.url, site_config)
             return
 
         if not self.driver:
@@ -545,8 +210,13 @@ class NewsSpider(scrapy.Spider):
             )
             time.sleep(1)
             html = self.driver.page_source
+            # IMPORTANT FIX (same as start page)
+            response = response.replace(body=html)
+
             selector = Selector(text=html)
+
             yield from self.parse_article_content(selector, response.url, site_config)
+
         except Exception as e:
             self.logger.error(f"Selenium article parsing failed for {response.url}: {e}")
             yield from self.parse_article_fallback(response)
@@ -558,46 +228,42 @@ class NewsSpider(scrapy.Spider):
         site_config = response.meta.get("site_config", {})
         yield from self.parse_article_content(response, response.url, site_config)
 
-    def parse_kantipur_article(self, url, site_config):
+    def parse_dynamic_article(self, url, site_config):
         try:
-            if self.driver:
-                self.driver.get(url)
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, ".description, .detail-content, .news-detail"))
-                )
-                time.sleep(2)
-                html = self.driver.page_source
-            else:
-                response = requests.get(
-                    url,
-                    headers={"User-Agent": self.settings.get("USER_AGENT")},
-                    timeout=10,
-                )
-                html = response.text
+            # Use your existing helper (fetch_dynamic_article)
+            result = fetch_dynamic_article(url, self.get_source_name(url))
 
-            selector = Selector(text=html)
+            if not result or not result.get("content"):
+                self.logger.warning(f"No content fetched by fetch_dynamic_article for {url}")
+                return
 
-            title = self.extract_with_selectors(selector, site_config.get("title_selectors", []))
-            content_text = self.extract_content_with_selectors(
-                selector, site_config.get("content_selectors", [])
-            )
-            image_url = self.extract_image_url(selector, url, site_config)
-            publish_date = self.extract_publish_date(selector, site_config)
+            title = result.get("title") or "No Title"
+            content_text = result.get("content", "").strip()
+            image_url = result.get("image")
+            publish_date = result.get("published_at") or datetime.now(timezone.utc)
 
-            if not content_text:
-                content_text = self.extract_ekantipur_content(selector)
+            if len(content_text) < self.MIN_CONTENT_LENGTH:
+                self.logger.warning(f"Content too short for {url} ({len(content_text)} chars)")
+                return
 
             yield self.make_item(
                 title=title,
                 url=url,
                 content=content_text,
-                summary="",
-                author=None,
+                summary=result.get("summary") or "",
+                author=result.get("author"),
                 published_at=publish_date,
-                extras={"image": image_url, "source": self.get_source_name(url), "method": "selenium" if self.driver else "requests"},
+                extras={
+                    "image": image_url,
+                    "thumbnail": image_url,
+                    "source": self.get_source_name(url),
+                    "method": "fetch_dynamic_article",
+                },
             )
+
         except Exception as e:
-            self.logger.error(f"Failed to parse Ekantipur article {url}: {e}")
+            self.logger.error(f"fetch_dynamic_article failed for {url}: {e}")
+
 
     def extract_with_selectors(self, selector, selectors):
         for css_selector in selectors:
@@ -621,31 +287,73 @@ class NewsSpider(scrapy.Spider):
         content = "\n".join([p.strip() for p in content_parts if p.strip()])
         return content
 
-    def extract_publish_date(self, selector, site_config):
+    
+
+    def extract_publish_date(self, selector, site_config: dict, url: str | None = None) -> datetime | None:
+        """
+        Extract published date from a news article.
+
+        Supports:
+        - ISO 8601 / RFC 3339 (English)
+        - Site-specific Nepali BS formats
+        - Fallbacks to <meta>, <time>, or custom CSS selectors
+        """
+
+        # --- 1️⃣ Try meta tags (most reliable for structured news sites)
         meta_date = (
             selector.css('meta[property="article:published_time"]::attr(content)').get()
             or selector.css('meta[name="pubdate"]::attr(content)').get()
             or selector.css('meta[name="publishdate"]::attr(content)').get()
+            or selector.css('meta[itemprop="datePublished"]::attr(content)').get()
         )
+
         if meta_date:
-            parsed = self.try_parse_datetime(meta_date.strip())
+            meta_date = meta_date.strip()
+            # (A) Try English ISO datetime
+            parsed = self.try_parse_datetime(meta_date)
             if parsed:
                 return parsed
 
+            # (B) Try Nepali → AD conversion
+            nep = parse_nepali_date(meta_date, url or "")
+            if nep:
+                return nep
+
+        # --- 2️⃣ Try site-specific CSS selectors
         for selector_css in site_config.get("date_selectors", []):
             date_text = selector.css(selector_css).get()
-            if date_text and date_text.strip():
-                parsed = self.try_parse_datetime(date_text.strip())
-                if parsed:
-                    return parsed
+            if not date_text:
+                continue
 
-        time_tag = selector.css("time::attr(datetime)").get()
-        if time_tag:
-            parsed = self.try_parse_datetime(time_tag.strip())
+            txt = date_text.strip()
+            if not txt:
+                continue
+
+            # (A) English/ISO date formats
+            parsed = self.try_parse_datetime(txt)
             if parsed:
                 return parsed
 
-        return None
+            # (B) Nepali formats (e.g., "२०८२ कात्तिक २७ गते १०:५९")
+            nep = parse_nepali_date(txt, url or "")
+            if nep:
+                return nep
+
+        # --- 3️⃣ Check <time> tag
+        time_tag = selector.css("time::attr(datetime)").get()
+        if time_tag:
+            time_tag = time_tag.strip()
+            parsed = self.try_parse_datetime(time_tag)
+            if parsed:
+                return parsed
+
+            nep = parse_nepali_date(time_tag, url or "")
+            if nep:
+                return nep
+
+        # --- 4️⃣ Fallback: default to now (helps prevent DB null issues)
+        return datetime.now(timezone.utc)
+
 
     def parse_article_content(self, selector, url, site_config):
         try:
@@ -677,7 +385,12 @@ class NewsSpider(scrapy.Spider):
                     summary=getattr(article, "summary", "") or "",
                     author=(article.authors[0] if getattr(article, "authors", []) else None),
                     published_at=publish_date,
-                    extras={"image": image_url, "source": self.get_source_name(url), "method": "newspaper3k+site_specific"},
+                    extras={
+                        "image": image_url,
+                        "thumbnail": image_url,
+                        "source": self.get_source_name(url),
+                        "method": "newspaper3k+site_specific",
+                    },
                 )
             else:
                 self.logger.warning(f"Insufficient content for {url}")
@@ -764,6 +477,9 @@ class NewsSpider(scrapy.Spider):
         }
         if extras and isinstance(extras, dict):
             item.update(extras)
+            thumb = extras.get("thumbnail") or extras.get("image")
+            if thumb:
+                item["thumbnail"] = thumb
         return item
 
     def closed(self, reason):
@@ -773,4 +489,3 @@ class NewsSpider(scrapy.Spider):
                 self.logger.info("Chrome driver closed successfully.")
             except Exception as e:
                 self.logger.error(f"Error closing driver: {e}")
-

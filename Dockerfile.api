@@ -10,7 +10,5 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-# Ensure the wait script is executable inside the image
-RUN chmod +x wait-for-db.sh
 
 CMD ["uvicorn","app.main:app","--host","0.0.0.0","--port","8000"]

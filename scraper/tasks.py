@@ -21,3 +21,24 @@ def run_generic_spider():
         print("Scrapy service failed:", e)
         return {"status": "error", "error": str(e)}
 
+
+@celery_app.task(name="scraper.tasks.update_trending_scores")
+def run_update_trending_scores():
+    """
+    Periodic task to recompute trending scores for recent news.
+    """
+    try:
+        from app.database.db import SessionLocal
+        from app.services.trending import update_trending_scores
+
+        db = SessionLocal()
+        try:
+            result = update_trending_scores(db)
+        finally:
+            db.close()
+
+        return {"status": "success", **result}
+    except Exception as e:
+        print("Trending score update failed:", e)
+        return {"status": "error", "error": str(e)}
+

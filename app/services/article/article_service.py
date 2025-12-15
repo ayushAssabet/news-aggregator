@@ -1,36 +1,31 @@
 from sqlalchemy.orm import Session
 from typing import Optional, List
+
 from ...schemas import ArticleCreate
 from ...models import Article
-from utils.dedupe import fingerprint
 from utils.reliability import reliability_score
 from ...repositories import article_repository as repo
-from ..ranking.ranking_service import record_article_rank, RankingConfig
 
 
 def create_article(db: Session, payload: ArticleCreate) -> Article:
-    fp = fingerprint(payload.title, str(payload.url))
-    exists = repo.get_by_fingerprint(db, fp)
+    # Quick exact URL dedupe for API-driven creation
+    exists = repo.get_by_url(db, str(payload.url))
     if exists:
         return exists
+
     data = {
         "title": payload.title,
         "url": str(payload.url),
+        "thumbnail": str(payload.thumbnail) if payload.thumbnail else None,
         "summary": payload.summary,
         "content": payload.content,
         "author": payload.author,
         "published_at": payload.published_at,
-        "fingerprint": fp,
-        "reliability": reliability_score(
-            str(payload.url), bool(payload.author), len(payload.content or "")
-        ),
+        "source": payload.source,
+        "embedding": payload.embedding,
+        "reliability": reliability_score(payload.model_dump()),
     }
     created = repo.create(db, data)
-    # Record rank in Redis (best-effort; ignore failures)
-    try:
-        record_article_rank(created, db, cfg=RankingConfig())
-    except Exception:
-        pass
     return created
 
 

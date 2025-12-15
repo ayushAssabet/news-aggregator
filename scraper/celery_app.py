@@ -1,8 +1,8 @@
 from celery import Celery
-import os
+from app.config.settings import settings
 
-redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-schedule_seconds = float(os.getenv("SCRAPE_SCHEDULE_SECONDS", "3600"))
+redis_url = settings.redis_url
+schedule_seconds = float(settings.scrape_schedule_seconds)
 
 celery = Celery(
     "news_scrap_task",
@@ -19,6 +19,10 @@ celery.conf.update(
     beat_schedule={
         "run-generic-spider": {
             "task": "scraper.tasks.run_generic_spider",
+            "schedule": schedule_seconds,
+        },
+        "update-trending-scores": {
+            "task": "scraper.tasks.update_trending_scores",
             "schedule": schedule_seconds,
         },
     },

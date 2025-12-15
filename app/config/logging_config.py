@@ -1,9 +1,9 @@
 import logging
-import os
+from .settings import settings
 
 
 def configure_logging(default_level: str = "INFO") -> None:
-    level_name = os.getenv("LOG_LEVEL", default_level).upper()
+    level_name = (settings.log_level or default_level).upper()
     level = getattr(logging, level_name, logging.INFO)
     logging.basicConfig(
         level=level,

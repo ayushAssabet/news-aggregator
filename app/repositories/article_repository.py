@@ -4,10 +4,8 @@ from sqlalchemy import select
 from ..models import Article
 
 
-def get_by_fingerprint(db: Session, fp: str) -> Optional[Article]:
-    return db.execute(
-        select(Article).where(Article.fingerprint == fp)
-    ).scalar_one_or_none()
+def get_by_url(db: Session, url: str) -> Optional[Article]:
+    return db.execute(select(Article).where(Article.url == url)).scalar_one_or_none()
 
 
 def create(db: Session, data: dict) -> Article:
@@ -21,7 +19,7 @@ def create(db: Session, data: dict) -> Article:
 def list_articles(db: Session, limit: int = 50, offset: int = 0) -> List[Article]:
     stmt = (
         select(Article)
-        .order_by(Article.id.desc())
+        .order_by(Article.published_at.desc(), Article.trending_score.desc())
         .limit(limit)
         .offset(offset)
     )

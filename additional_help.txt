@@ -1,0 +1,302 @@
+Perfect! You've already got a solid foundation with pgvector and embeddings. Let me design a trending engine that fits your stack.
+
+## Database Schema Enhancement
+
+First, add these fields to your news table:
+
+```sql
+ALTER TABLE news ADD COLUMN IF NOT EXISTS trending_score FLOAT DEFAULT 0;
+ALTER TABLE news ADD COLUMN IF NOT EXISTS coverage_count INT DEFAULT 1;
+ALTER TABLE news ADD COLUMN IF NOT EXISTS source_weight FLOAT DEFAULT 0.5;
+ALTER TABLE news ADD COLUMN IF NOT EXISTS last_score_update TIMESTAMP;
+```
+
+## Trending Score Calculation
+
+Here's a FastAPI implementation:
+
+```python
+from datetime import datetime, timezone
+import math
+from typing import List
+import numpy as np
+
+class TrendingEngine:
+    
+    # Source weights - adjust based on your portals' credibility
+    SOURCE_WEIGHTS = {
+        'kantipur': 0.95,
+        'ekantipur': 0.95,
+        'onlinekhabar': 0.90,
+        'setopati': 0.85,
+        'ratopati': 0.80,
+        'nepalipaisa': 0.75,
+        'annapurnapost': 0.85,
+        # Add your other sources
+    }
+    
+    # Category weights
+    CATEGORY_WEIGHTS = {
+        'politics': 1.0,
+        'breaking': 1.2,
+        'national': 1.0,
+        'economy': 0.9,
+        'international': 0.8,
+        'sports': 0.7,
+        'entertainment': 0.6,
+        'lifestyle': 0.5,
+    }
+    
+    def calculate_recency_score(self, published_at: datetime, decay_hours: float = 12.0) -> float:
+        """Exponential decay based on time"""
+        now = datetime.now(timezone.utc)
+        hours_old = (now - published_at).total_seconds() / 3600
+        
+        # Exponential decay: score halves every decay_hours
+        decay_rate = math.log(2) / decay_hours
+        score = math.exp(-decay_rate * hours_old)
+        
+        return max(score, 0.01)  # Minimum score 0.01
+    
+    def calculate_coverage_score(self, similar_news: List[dict]) -> tuple[float, int]:
+        """
+        Score based on how many portals covered similar story
+        Returns (score, count)
+        """
+        if not similar_news:
+            return 1.0, 1
+        
+        coverage_count = len(similar_news) + 1  # +1 for current article
+        
+        # Logarithmic scaling - diminishing returns
+        coverage_score = 1 + math.log(coverage_count, 2) * 0.5
+        
+        return coverage_score, coverage_count
+    
+    def get_source_weight(self, source: str) -> float:
+        """Get credibility weight for news source"""
+        source_lower = source.lower().strip()
+        return self.SOURCE_WEIGHTS.get(source_lower, 0.6)
+    
+    def get_category_weight(self, category: str) -> float:
+        """Get importance weight for category"""
+        if not category:
+            return 0.7
+        category_lower = category.lower().strip()
+        return self.CATEGORY_WEIGHTS.get(category_lower, 0.7)
+    
+    def calculate_trending_score(
+        self,
+        published_at: datetime,
+        source: str,
+        category: str,
+        similar_news: List[dict],
+        boost_factor: float = 1.0
+    ) -> dict:
+        """
+        Calculate final trending score
+        Returns dict with score and breakdown
+        """
+        
+        recency = self.calculate_recency_score(published_at)
+        source_weight = self.get_source_weight(source)
+        category_weight = self.get_category_weight(category)
+        coverage_score, coverage_count = self.calculate_coverage_score(similar_news)
+        
+        # Weighted combination
+        final_score = (
+            recency * 0.40 +           # Time is most important
+            coverage_score * 0.30 +     # Multi-portal coverage matters
+            source_weight * 0.20 +      # Source credibility
+            category_weight * 0.10      # Category importance
+        ) * boost_factor
+        
+        return {
+            'trending_score': final_score,
+            'coverage_count': coverage_count,
+            'breakdown': {
+                'recency': round(recency, 3),
+                'coverage': round(coverage_score, 3),
+                'source': round(source_weight, 3),
+                'category': round(category_weight, 3),
+            }
+        }
+
+
+# FastAPI endpoint
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+router = APIRouter()
+trending_engine = TrendingEngine()
+
+@router.post("/update-trending-scores")
+async def update_trending_scores(db: AsyncSession = Depends(get_db)):
+    """
+    Background job to update trending scores
+    Run this every 15-30 minutes via cron or APScheduler
+    """
+    
+    # Get recent news (last 48 hours)
+    query = """
+        SELECT id, published_at, source, category, similar_news
+        FROM news
+        WHERE published_at > NOW() - INTERVAL '48 hours'
+    """
+    
+    result = await db.execute(query)
+    news_items = result.fetchall()
+    
+    updates = []
+    for item in news_items:
+        score_data = trending_engine.calculate_trending_score(
+            published_at=item.published_at,
+            source=item.source,
+            category=item.category,
+            similar_news=item.similar_news or []
+        )
+        
+        updates.append({
+            'id': item.id,
+            'trending_score': score_data['trending_score'],
+            'coverage_count': score_data['coverage_count']
+        })
+    
+    # Bulk update
+    if updates:
+        await db.execute(
+            """
+            UPDATE news
+            SET trending_score = data.score,
+                coverage_count = data.count,
+                last_score_update = NOW()
+            FROM (VALUES {}) AS data(id, score, count)
+            WHERE news.id = data.id
+            """.format(
+                ','.join(f"({u['id']}, {u['trending_score']}, {u['coverage_count']})" 
+                        for u in updates)
+            )
+        )
+        await db.commit()
+    
+    return {"updated": len(updates)}
+
+
+@router.get("/trending-news")
+async def get_trending_news(
+    limit: int = 20,
+    category: str = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get top trending news"""
+    
+    query = """
+        SELECT id, title, source, category, published_at, 
+               trending_score, coverage_count, similar_news
+        FROM news
+        WHERE published_at > NOW() - INTERVAL '48 hours'
+    """
+    
+    if category:
+        query += f" AND category = '{category}'"
+    
+    query += f" ORDER BY trending_score DESC LIMIT {limit}"
+    
+    result = await db.execute(query)
+    return result.fetchall()
+```
+
+## Automated Score Updates
+
+Use APScheduler to run updates automatically:
+
+```python
+# scheduler.py
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+
+scheduler = AsyncIOScheduler()
+
+def start_scheduler():
+    # Update trending scores every 15 minutes
+    scheduler.add_job(
+        update_trending_scores,
+        IntervalTrigger(minutes=15),
+        id='update_trending_scores',
+        replace_existing=True
+    )
+    scheduler.start()
+
+# In main.py
+@app.on_event("startup")
+async def startup_event():
+    start_scheduler()
+```
+
+## SQL Index for Performance
+
+```sql
+-- Index for trending queries
+CREATE INDEX idx_trending_score ON news(trending_score DESC, published_at DESC);
+CREATE INDEX idx_category_trending ON news(category, trending_score DESC);
+CREATE INDEX idx_published_at ON news(published_at DESC);
+```
+
+## React Frontend Component
+
+```typescript
+// TrendingNews.tsx
+interface NewsItem {
+  id: number;
+  title: string;
+  source: string;
+  category: string;
+  trending_score: number;
+  coverage_count: number;
+  published_at: string;
+}
+
+export function TrendingNews() {
+  const [news, setNews] = useState<NewsItem[]>([]);
+  
+  useEffect(() => {
+    fetch('/api/trending-news?limit=20')
+      .then(r => r.json())
+      .then(setNews);
+  }, []);
+  
+  return (
+    <div className="trending-section">
+      {news.map(item => (
+        <NewsCard key={item.id} news={item}>
+          {item.coverage_count > 3 && (
+            <span className="badge">
+              🔥 {item.coverage_count} portals
+            </span>
+          )}
+        </NewsCard>
+      ))}
+    </div>
+  );
+}
+```
+
+## Future Enhancements
+
+**Phase 2 (after user data):**
+- Click-through rate (CTR) boost
+- Read time tracking
+- User engagement score
+
+**Phase 3 (ML-based):**
+- Use your embeddings for topic clustering
+- Detect breaking news via sudden coverage spikes
+- Personalized trending based on user history
+
+## Quick Wins
+
+1. **Breaking News Detector**: If 3+ portals publish similar news within 30 mins → boost by 1.5x
+2. **Weekend Adjustment**: Lower decay rate on weekends (less news competition)
+3. **Evening Boost**: Slightly boost scores 6-9 PM Nepal time (peak reading)
+
+Want me to help you implement any specific part, or refine the scoring weights based on your specific needs?
